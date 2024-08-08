@@ -1,0 +1,19 @@
+spring:
+
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: cafe
+    password: cafe2413
+    url : jdbc:mariadb://127.0.0.1:3306/messenger
+
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+
+
+
+logging:
+  level:
+    root: debug
