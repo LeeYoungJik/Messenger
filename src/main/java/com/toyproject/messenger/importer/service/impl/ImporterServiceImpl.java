@@ -1,6 +1,7 @@
 package com.toyproject.messenger.importer.service.impl;
 
 import com.toyproject.messenger.importer.entity.NewMessengerUser;
+import com.toyproject.messenger.importer.repository.NewMessengerUserRepository;
 import com.toyproject.messenger.importer.service.ImporterService;
 import com.toyproject.messenger.importer.service.LoadNewUserService;
 import com.toyproject.messenger.user.entity.MessengerUser;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -22,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ImporterServiceImpl implements ImporterService {
 
-    private final LoadNewUserService loadNewUserService;
+    private final NewMessengerUserRepository newMessengerUserRepository;
 
     private final UserServiceImpl userService;
 
@@ -34,33 +36,35 @@ public class ImporterServiceImpl implements ImporterService {
         List<MessengerUser> updateUser = new ArrayList<>();
         List<MessengerUser> deleteUser = new ArrayList<>();
 
-        List<NewMessengerUser> newUsers = loadNewUserService.LoadAll();
+        List<NewMessengerUser> newUsers = newMessengerUserRepository.findAll();
         List<MessengerUser> users = userService.findAll();
 
         StringBuffer resultStringBuffer = new StringBuffer();
 
-
         for (NewMessengerUser loadUser : newUsers) {
-            MessengerUser messengerUser = userService.findbyId(loadUser.getId());
+            Optional<MessengerUser> messengerUserOtl = userService.findbyIdOptional(loadUser.getId());
 
-            if (messengerUser == null) {//insert case
+            if (!messengerUserOtl.isPresent()) {//insert case
                 insertUser.add(makeNewMessengeruser(loadUser));
-            }
-
-            if(!updateChek(loadUser, messengerUser)){//update case
-                updateUser.add(messengerUser.setNewMessengerUser(loadUser));
+            } else {
+                MessengerUser messengerUser = messengerUserOtl.get();
+                if (!updateChek(loadUser, messengerUser)) {//update case
+                    updateUser.add(messengerUser.setUserInfo(loadUser));
+                }
             }
         }
 
         HashMap<String, NewMessengerUser> deleteCheckList = new HashMap<>();
-        newUsers.stream().forEach(user -> {deleteCheckList.put(user.getLoginId(), user);});
-        deleteUser =  users.stream().filter(e -> deleteCheckList.get(e.getLoginId()).getLoginId() == null).collect(Collectors.toList());
+        newUsers.stream().forEach(user -> { deleteCheckList.put(user.getLoginId(), user); });
+        deleteUser = users.stream().filter(e -> deleteCheckList.get(e.getLoginId()) == null).collect(Collectors.toList());
+
+        log.info("import User Check end insert = {}, update = {}, delete = {}",insertUser.size(),updateUser.size(),deleteUser.size());
 
         userService.saveAll(insertUser);
-        userService.saveAll(updateUser);
+//        userService.saveAll(updateUser);
         deleteUser.stream().forEach(e -> userService.delete(e.getID()));
 
-        return null;
+        return resultStringBuffer.toString();
     }
 
 
@@ -83,20 +87,16 @@ public class ImporterServiceImpl implements ImporterService {
 //    }
 
 
-    private Boolean updateChek(NewMessengerUser newMessengerUser, MessengerUser messengerUser){
-        if(!newMessengerUser.getName().trim().equals(messengerUser.getName())
-                || newMessengerUser.getLoginPw().equals(messengerUser.getLoginPw())
-                || newMessengerUser.getDeptCode().equals(messengerUser.getDeptCode())
-                || newMessengerUser.getDeptName().equals(messengerUser.getDeptname())){
-            log.info("update case newUser id ={} , name ={}",newMessengerUser.getLoginId(),newMessengerUser.getDeptName());
+    private Boolean updateChek(NewMessengerUser newMessengerUser, MessengerUser messengerUser) {
+        if (!newMessengerUser.getName().trim().equals(messengerUser.getName())
+                || !newMessengerUser.getLoginPw().equals(messengerUser.getLoginPw())
+                || !newMessengerUser.getDeptCode().equals(messengerUser.getDeptCode())
+                || !newMessengerUser.getDeptName().equals(messengerUser.getDeptname())) {
+            log.info("update case newUser id ={} , name ={}", newMessengerUser.getLoginId(), newMessengerUser.getDeptName());
             return false;
         }
         return true;
     }
 
-    private Boolean checkDeleteCase(MessengerUser messengerUser, List<NewMessengerUser> newUserList){
-
-        return true;
-    }
 
 }

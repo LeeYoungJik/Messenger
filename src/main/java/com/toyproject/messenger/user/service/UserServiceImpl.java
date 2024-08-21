@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,16 @@ public class UserServiceImpl {
         return messengerUser;
     }
 
+    @Transactional(readOnly = true)
+    public Optional<MessengerUser> findbyIdOptional(Long id){
+        return messengerUserRepository.findById(id);
+    }
+
+//    @Transactional(readOnly = true)
+//    public Optional findbyId(Long id){
+//        Optional aa =  messengerUserRepository.findById(id);
+//        return aa;
+//    }
 
     public void delete(Long id){
         messengerUserRepository.delete(messengerUserRepository.findById(id).orElseThrow(() -> new UserNotFoundException((String.format("User id %s is not found",id)))));
@@ -45,19 +56,14 @@ public class UserServiceImpl {
         messengerUserRepository.saveAll(messengerUserList);
     }
 
+
+    public void flush(){
+        messengerUserRepository.flush();
+    }
+
     public MessengerUser save(MessengerUser messengerUser){
         MessengerUser newUser = messengerUserRepository.save(messengerUser);
         return newUser;
     }
-
-
-    @Transactional//굳이 안 써도 될듯.
-    public void update(MessengerUser messengerUser){
-        messengerUserRepository.findById(messengerUser.getID());
-    }
-
-
-
-
 
 }
